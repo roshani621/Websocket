@@ -1,0 +1,89 @@
+
+  
+  
+  import logo from './logo.svg';
+  import './App.css';
+  import {Input, Button} from 'antd';
+  import { useEffect, useState } from 'react';
+  import io from 'socket.io-client';
+
+  const socket = io('http://localhost:3001');
+
+  function App() {
+
+    const [userName, setUserName] = useState('');
+    const [message, setMessage] = useState('');
+    const [chat, setChat] = useState([]);
+    const [joied, setJoined] = useState(false);
+    useEffect(() => {
+      const handleNewMessage = (data) => {
+        console.log("Received message:", data);
+        setChat((prevChat) => [...prevChat, data]);
+      };
+
+      const handleHistory = (history) => {
+        console.log("Chat history:", history);
+        setChat(history);
+      };
+
+      socket.on("chat-user", handleNewMessage);
+      socket.on("chat-history", handleHistory);
+
+      socket.emit("get-chat-history");
+
+      return () => {
+        socket.off("chat-user", handleNewMessage);
+        socket.off("chat-history", handleHistory);
+      };
+    }, []);
+
+
+    const sendMessage = () => {
+      if (message.trim() !== '') {
+        socket.emit("chat-user", { userName, message });
+        setMessage('');
+      }
+    }
+
+    if(!joied){
+      return(
+        <div className="App">
+        <h2>Enter your Name: </h2>
+        <Input value={userName} onChange={(e) => setUserName(e.target.value)} 
+        style={{width: "200px"}}
+        />
+        <Button type="primary" onClick={() => setJoined(true)}
+        style={{marginLeft: '10px'}}>Join Chat</Button>
+      </div>
+      )
+    }
+
+    return (
+      <div className="App">
+        <div className="chat-box">
+          {chat.map((line, i) => (
+            <div key={i}>
+              <strong>{line.userName}:</strong> {line.message}
+            </div>
+          ))}
+      </div>
+      <div className="input-box">
+        <div className="chat-box1">
+          <Input
+          type="text"
+          placeholder="Enter message"
+          style={{ width: "300px", marginRight: '10px'
+            , backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: '20px'
+          }}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+        />
+        <Button onClick={sendMessage}>Send</Button>
+        </div>
+      </div>
+      </div>
+    )
+  }
+
+  export default App;
